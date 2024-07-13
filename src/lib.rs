@@ -1,22 +1,19 @@
 mod error;
-// fn main() {
-//     println!("Hello, world!");
-// }
 
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint,
+    msg,
     entrypoint::ProgramResult,
     pubkey::Pubkey,
-    msg,
-    program_pack::{IsInitialized, Pack, Sealed},
     sysvar::{rent::Rent, Sysvar},
+    system_instruction::transfer,
+    program_pack::{IsInitialized, Pack, Sealed},
+    program_error::ProgramError,
+    program::invoke,
 };
 
 use std::convert::TryInto;
-use solana_program::program_error::ProgramError;
-
-// use error::EscrowError::InvalidInstruction;
 
 // program entrypoint's implementation
 pub fn process_instruction(
@@ -24,8 +21,6 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8]
 ) -> ProgramResult {
-    // log a message to the blockchain
-    msg!("Hello, world!");
     let _ = Processor::process(program_id, accounts, instruction_data);
  
     // gracefully exit the program
@@ -59,30 +54,38 @@ impl Processor {
         program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let initializer = next_account_info(account_info_iter)?;
 
-        if !initializer.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        let from_account = next_account_info(account_info_iter)?;
 
-        let temp_token_account = next_account_info(account_info_iter)?;
+        let to_account = next_account_info(account_info_iter)?;
 
-        let token_to_receive_account = next_account_info(account_info_iter)?;
-        if *token_to_receive_account.owner != spl_token::id() {
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        let ix = transfer(from_account.key, to_account.key, 1000000000);
 
-        let escrow_account = next_account_info(account_info_iter)?;
-        let rent = &Rent::from_account_info(next_account_info(account_info_iter)?)?;
+        invoke(
+            &ix,
+            &[from_account.clone(), to_account.clone()], // accounts required by instruction
+        )?;
 
-        if !rent.is_exempt(escrow_account.lamports(), escrow_account.data_len()) {
-            return Err(error::EscrowError::NotRentExempt.into());
-        }
+        // if !initializer.is_signer {
+        //     return Err(ProgramError::MissingRequiredSignature);
+        // }
 
-        let mut escrow_info = Escrow::unpack_unchecked(&escrow_account.try_borrow_data()?)?;
-        if escrow_info.is_initialized() {
-            return Err(ProgramError::AccountAlreadyInitialized);
-        }
+        // let token_to_receive_account = next_account_info(account_info_iter)?;
+        // if *token_to_receive_account.owner != spl_token::id() {
+        //     return Err(ProgramError::IncorrectProgramId);
+        // }
+
+        // let escrow_account = next_account_info(account_info_iter)?;
+        // let rent = &Rent::from_account_info(next_account_info(account_info_iter)?)?;
+
+        // if !rent.is_exempt(escrow_account.lamports(), escrow_account.data_len()) {
+        //     return Err(error::EscrowError::NotRentExempt.into());
+        // }
+
+        // let mut escrow_info = Escrow::unpack_unchecked(&escrow_account.try_borrow_data()?)?;
+        // if escrow_info.is_initialized() {
+        //     return Err(ProgramError::AccountAlreadyInitialized);
+        // }
 
         Ok(())
     }
