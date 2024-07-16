@@ -37,21 +37,21 @@ impl Processor {
         let instruction = CustomInstruction::unpack(instruction_data)?;
 
         match instruction {
-            CustomInstruction::Init { amount } => {
-                msg!("Instruction: Init");
-                Self::process_init_escrow(accounts, amount, program_id)
-            }
             CustomInstruction::Mint { amount } => {
                 msg!("Instruction: Mint");
-                Self::process_init_escrow(accounts, amount, program_id)
+                Self::process_mint(accounts, amount, program_id)
+            }
+            CustomInstruction::Burn { amount } => {
+                msg!("Instruction: Burn");
+                Self::process_burn(accounts, amount, program_id)
             }
         }
     }
 
-    fn process_init_escrow(
+    fn process_mint(
         accounts: &[AccountInfo],
         amount: u64,
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
@@ -86,6 +86,34 @@ impl Processor {
         // if escrow_info.is_initialized() {
         //     return Err(ProgramError::AccountAlreadyInitialized);
         // }
+
+        Ok(())
+    }
+
+    fn process_burn(
+        accounts: &[AccountInfo],
+        amount: u64,
+        _program_id: &Pubkey,
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let from_account = next_account_info(account_info_iter)?;
+
+        let to_account = next_account_info(account_info_iter)?;
+
+        // let ix = transfer(from_account.key, to_account.key, 1000000000);
+
+        // invoke(
+        //     &ix,
+        //     &[from_account.clone(), to_account.clone()], // accounts required by instruction
+        // )?;
+
+        if **from_account.try_borrow_lamports()? < 1000000000 {
+            return Err(error::EscrowError::InvalidInstruction.into());
+        }
+        // Debit from_account and credit to_account
+        **from_account.try_borrow_mut_lamports()? -= 1000000000;
+        **to_account.try_borrow_mut_lamports()? += 1000000000;
 
         Ok(())
     }
@@ -176,11 +204,11 @@ pub enum CustomInstruction {
     // 3. `[writable]` The escrow account, it will hold all necessary info about the trade.
     // 4. `[]` The rent sysvar
     // 5. `[]` The token program
-    Init {
+    Mint {
         // The amount party A expects to receive of token Y
         amount: u64
     },
-    Mint {
+    Burn {
         // The amount party A expects to receive of token Y
         amount: u64
     },
@@ -192,7 +220,10 @@ impl CustomInstruction {
         let (tag, rest) = input.split_first().ok_or(error::EscrowError::InvalidInstruction)?;
 
         Ok(match tag {
-            0 => Self::Init {
+            0 => Self::Mint {
+                amount: Self::unpack_amount(rest)?,
+            },
+            1 => Self::Burn {
                 amount: Self::unpack_amount(rest)?,
             },
             _ => return Err(error::EscrowError::InvalidInstruction.into()),
