@@ -17,25 +17,28 @@ sender_bytes = json.loads(open('/home/ubuntu/.config/solana/id.json', 'rt').read
 sender = solders.keypair.Keypair.from_bytes(sender_bytes)
 print(sender.pubkey())
 
-# 生成密钥对
-keypair = Keypair()
-program_id = solders.pubkey.Pubkey.from_string('EAmZj4ctukjgLsp7okQ8R4Yzi4rtuWZEPVCs6nTi2mry')
+app_account_bytes = json.loads(open('./app_account.json', 'rt').read())
+app_account = solders.keypair.Keypair.from_bytes(app_account_bytes)
+print(app_account.pubkey())
 
-# 确定账户大小
-# account_size = 1024
+# 生成密钥对
+# app_account = Keypair()
+# new_account = Pubkey.new_unique()
+program_id = solders.pubkey.Pubkey.from_string('EAmZj4ctukjgLsp7okQ8R4Yzi4rtuWZEPVCs6nTi2mry')
+account_size = 1
 
 instruction = solders.system_program.create_account(
     solders.system_program.CreateAccountParams(
         from_pubkey=sender.pubkey(),
-        to_pubkey=keypair.pubkey(),
-        lamports=10000000,
-        space=0,
+        to_pubkey=app_account.pubkey(),
+        lamports=1000000,
+        space=account_size,
         owner=program_id
     )
 )
 
 tx = solana.transaction.Transaction()
 tx.add(instruction)
-ret = http_client.send_transaction(tx, sender, keypair)
+ret = http_client.send_transaction(tx, sender, app_account)
 # print(ret)
-print(keypair.pubkey())
+# print(keypair.pubkey())

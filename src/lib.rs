@@ -6,7 +6,7 @@ use solana_program::{
     msg,
     entrypoint::ProgramResult,
     pubkey::Pubkey,
-    sysvar::{rent::Rent, Sysvar},
+    // sysvar::{rent::Rent, Sysvar},
     system_instruction::transfer,
     program_pack::{IsInitialized, Pack, Sealed},
     program_error::ProgramError,
@@ -37,20 +37,38 @@ impl Processor {
         let instruction = CustomInstruction::unpack(instruction_data)?;
 
         match instruction {
-            CustomInstruction::Mint { amount } => {
-                msg!("Instruction: Mint");
-                Self::process_mint(accounts, amount, program_id)
+            CustomInstruction::Setup { amount } => {
+                msg!("Instruction: Setup");
+                Self::process_setup(accounts, amount, program_id)
             }
-            CustomInstruction::Burn { amount } => {
-                msg!("Instruction: Burn");
-                Self::process_burn(accounts, amount, program_id)
+            CustomInstruction::Buy { amount } => {
+                msg!("Instruction: Buy");
+                Self::process_buy(accounts, amount, program_id)
+            }
+            CustomInstruction::Sell { amount } => {
+                msg!("Instruction: Sell");
+                Self::process_sell(accounts, amount, program_id)
             }
         }
     }
 
-    fn process_mint(
+    fn process_setup(
         accounts: &[AccountInfo],
-        amount: u64,
+        _amount: u64,
+        _program_id: &Pubkey,
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let from_account = next_account_info(account_info_iter)?;
+
+        let to_account = next_account_info(account_info_iter)?;
+
+        Ok(())
+    }
+
+    fn process_buy(
+        accounts: &[AccountInfo],
+        _amount: u64,
         _program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -90,9 +108,9 @@ impl Processor {
         Ok(())
     }
 
-    fn process_burn(
+    fn process_sell(
         accounts: &[AccountInfo],
-        amount: u64,
+        _amount: u64,
         _program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -204,11 +222,15 @@ pub enum CustomInstruction {
     // 3. `[writable]` The escrow account, it will hold all necessary info about the trade.
     // 4. `[]` The rent sysvar
     // 5. `[]` The token program
-    Mint {
+    Setup {
         // The amount party A expects to receive of token Y
         amount: u64
     },
-    Burn {
+    Buy {
+        // The amount party A expects to receive of token Y
+        amount: u64
+    },
+    Sell {
         // The amount party A expects to receive of token Y
         amount: u64
     },
@@ -220,10 +242,13 @@ impl CustomInstruction {
         let (tag, rest) = input.split_first().ok_or(error::EscrowError::InvalidInstruction)?;
 
         Ok(match tag {
-            0 => Self::Mint {
+            0 => Self::Setup {
                 amount: Self::unpack_amount(rest)?,
             },
-            1 => Self::Burn {
+            1 => Self::Buy {
+                amount: Self::unpack_amount(rest)?,
+            },
+            2 => Self::Sell {
                 amount: Self::unpack_amount(rest)?,
             },
             _ => return Err(error::EscrowError::InvalidInstruction.into()),
