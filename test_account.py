@@ -26,7 +26,8 @@ print(sender.pubkey())
 # new_account = Pubkey.new_unique()
 program_id = solders.pubkey.Pubkey.from_string('EAmZj4ctukjgLsp7okQ8R4Yzi4rtuWZEPVCs6nTi2mry')
 account_size = 1
-app_pubkey = solders.pubkey.Pubkey.create_with_seed(sender.pubkey(), 'app3', program_id)
+seed = 'app'
+app_pubkey = solders.pubkey.Pubkey.create_with_seed(sender.pubkey(), seed, program_id)
 print(app_pubkey)
 account_info = http_client.get_account_info(app_pubkey)
 print(account_info)
@@ -47,7 +48,7 @@ if not account_info.value:
             from_pubkey=sender.pubkey(),
             to_pubkey=app_pubkey,
             base=sender.pubkey(),
-            seed='app3',
+            seed=seed,
             lamports=1000000,
             space=account_size,
             owner=program_id

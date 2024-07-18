@@ -13,7 +13,11 @@ use solana_program::{
     program::invoke,
 };
 
-use std::convert::TryInto;
+use std::{
+    convert::TryInto,
+    str,
+};
+//use std::cell::RefMut;
 
 // program entrypoint's implementation
 pub fn process_instruction(
@@ -59,9 +63,9 @@ impl Processor {
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
-        let from_account = next_account_info(account_info_iter)?;
+        let _from_account = next_account_info(account_info_iter)?;
 
-        let to_account = next_account_info(account_info_iter)?;
+        let _to_account = next_account_info(account_info_iter)?;
 
         Ok(())
     }
@@ -84,6 +88,14 @@ impl Processor {
             &[from_account.clone(), to_account.clone()], // accounts required by instruction
         )?;
 
+        let user_account = next_account_info(account_info_iter)?;
+        msg!(&str::from_utf8(&user_account.try_borrow_data().unwrap()).unwrap());
+        let mut data = user_account.try_borrow_mut_data().unwrap();
+        //let data2 = RefMut::map(data, |t| &mut t.0);
+        (**data)[0] = 1;
+
+        // let _program_account = next_account_info(account_info_iter)?;
+
         // if !initializer.is_signer {
         //     return Err(ProgramError::MissingRequiredSignature);
         // }
@@ -97,7 +109,7 @@ impl Processor {
         // let rent = &Rent::from_account_info(next_account_info(account_info_iter)?)?;
 
         // if !rent.is_exempt(escrow_account.lamports(), escrow_account.data_len()) {
-        //     return Err(error::EscrowError::NotRentExempt.into());
+        //     return Err(error::InstructionError::NotRentExempt.into());
         // }
 
         // let mut escrow_info = Escrow::unpack_unchecked(&escrow_account.try_borrow_data()?)?;
@@ -127,7 +139,7 @@ impl Processor {
         // )?;
 
         if **from_account.try_borrow_lamports()? < 1000000000 {
-            return Err(error::EscrowError::InvalidInstruction.into());
+            return Err(error::InstructionError::InvalidInstruction.into());
         }
         // Debit from_account and credit to_account
         **from_account.try_borrow_mut_lamports()? -= 1000000000;
@@ -239,7 +251,7 @@ pub enum CustomInstruction {
 impl CustomInstruction {
     /// Unpacks a byte buffer into a [CustomInstruction](enum.CustomInstruction.html).
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
-        let (tag, rest) = input.split_first().ok_or(error::EscrowError::InvalidInstruction)?;
+        let (tag, rest) = input.split_first().ok_or(error::InstructionError::InvalidInstruction)?;
 
         Ok(match tag {
             0 => Self::Setup {
@@ -251,7 +263,7 @@ impl CustomInstruction {
             2 => Self::Sell {
                 amount: Self::unpack_amount(rest)?,
             },
-            _ => return Err(error::EscrowError::InvalidInstruction.into()),
+            _ => return Err(error::InstructionError::InvalidInstruction.into()),
         })
     }
 
@@ -260,7 +272,7 @@ impl CustomInstruction {
             .get(..8)
             .and_then(|slice| slice.try_into().ok())
             .map(u64::from_le_bytes)
-            .ok_or(error::EscrowError::InvalidInstruction)?;
+            .ok_or(error::InstructionError::InvalidInstruction)?;
         Ok(amount)
     }
 }
