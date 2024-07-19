@@ -47,6 +47,7 @@ impl Processor {
             }
             CustomInstruction::Buy { amount } => {
                 msg!("Instruction: Buy");
+                msg!("{}", amount.to_string());
                 Self::process_buy(accounts, amount, program_id)
             }
             CustomInstruction::Sell { amount } => {
@@ -72,29 +73,28 @@ impl Processor {
 
     fn process_buy(
         accounts: &[AccountInfo],
-        _amount: u64,
+        amount: u64,
         _program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let from_account = next_account_info(account_info_iter)?;
 
-        let to_account = next_account_info(account_info_iter)?;
+        let app_account = next_account_info(account_info_iter)?;
 
-        let ix = transfer(from_account.key, to_account.key, 1000000000);
+        let ix = transfer(from_account.key, app_account.key, 1000000000);
 
         invoke(
             &ix,
-            &[from_account.clone(), to_account.clone()], // accounts required by instruction
+            &[from_account.clone(), app_account.clone()], // accounts required by instruction
         )?;
 
         let user_account = next_account_info(account_info_iter)?;
-        msg!(&str::from_utf8(&user_account.try_borrow_data().unwrap()).unwrap());
+        //msg!(&str::from_utf8(&user_account.try_borrow_data().unwrap()).unwrap());
         let mut data = user_account.try_borrow_mut_data().unwrap();
-        //let data2 = RefMut::map(data, |t| &mut t.0);
-        (**data)[0] = 1;
+        (**data).copy_from_slice(&amount.to_le_bytes());
 
-        // let _program_account = next_account_info(account_info_iter)?;
+        // let system_program_account = next_account_info(account_info_iter)?;
 
         // if !initializer.is_signer {
         //     return Err(ProgramError::MissingRequiredSignature);
@@ -122,14 +122,14 @@ impl Processor {
 
     fn process_sell(
         accounts: &[AccountInfo],
-        _amount: u64,
+        amount: u64,
         _program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let from_account = next_account_info(account_info_iter)?;
 
-        let to_account = next_account_info(account_info_iter)?;
+        let app_account = next_account_info(account_info_iter)?;
 
         // let ix = transfer(from_account.key, to_account.key, 1000000000);
 
@@ -138,12 +138,12 @@ impl Processor {
         //     &[from_account.clone(), to_account.clone()], // accounts required by instruction
         // )?;
 
-        if **from_account.try_borrow_lamports()? < 1000000000 {
+        if **from_account.try_borrow_lamports()? < amount {
             return Err(error::InstructionError::InvalidInstruction.into());
         }
         // Debit from_account and credit to_account
-        **from_account.try_borrow_mut_lamports()? -= 1000000000;
-        **to_account.try_borrow_mut_lamports()? += 1000000000;
+        **from_account.try_borrow_mut_lamports()? -= amount;
+        **app_account.try_borrow_mut_lamports()? += amount;
 
         Ok(())
     }
@@ -249,7 +249,6 @@ pub enum CustomInstruction {
 }
 
 impl CustomInstruction {
-    /// Unpacks a byte buffer into a [CustomInstruction](enum.CustomInstruction.html).
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
         let (tag, rest) = input.split_first().ok_or(error::InstructionError::InvalidInstruction)?;
 
@@ -269,7 +268,7 @@ impl CustomInstruction {
 
     fn unpack_amount(input: &[u8]) -> Result<u64, ProgramError> {
         let amount = input
-            .get(..8)
+            .get(..16)
             .and_then(|slice| slice.try_into().ok())
             .map(u64::from_le_bytes)
             .ok_or(error::InstructionError::InvalidInstruction)?;

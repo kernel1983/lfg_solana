@@ -22,7 +22,7 @@ def main():
     sender = solders.keypair.Keypair.from_bytes(sender_bytes)
     print(sender.pubkey())
 
-    account_size = 1
+    account_size = 16
     seed = 'app'
     user_pubkey = solders.pubkey.Pubkey.create_with_seed(sender.pubkey(), seed, program_id)
     print(user_pubkey)
@@ -35,7 +35,7 @@ def main():
                 to_pubkey=user_pubkey,
                 base=sender.pubkey(),
                 seed=seed,
-                lamports=1000000,
+                lamports=10000000,
                 space=account_size,
                 owner=program_id
             )
@@ -47,11 +47,11 @@ def main():
         ret = http_client.send_transaction(tx, sender)
         print(ret)
         # print(keypair.pubkey())
-        return
+        # return
         # wait until account created
 
     print('instruction')
-    arbitrary_instruction_data = bytes([1, 0, 0, 0, 0, 0, 0, 0, 0])
+    arbitrary_instruction_data = bytes([1, 10, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     accounts = [
         solders.instruction.AccountMeta(sender.pubkey(), True, False),
         solders.instruction.AccountMeta(solders.pubkey.Pubkey.from_string('GmkqdfZd1MzatuPbSNbe2RshuakKKmGreDbSeUEZaJ3z'), False, True),
