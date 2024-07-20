@@ -8,14 +8,14 @@ use solana_program::{
     pubkey::Pubkey,
     // sysvar::{rent::Rent, Sysvar},
     system_instruction::transfer,
-    program_pack::{IsInitialized, Pack, Sealed},
+    // program_pack::{IsInitialized, Pack, Sealed},
     program_error::ProgramError,
     program::invoke,
 };
 
 use std::{
     convert::TryInto,
-    str,
+    // str,
 };
 //use std::cell::RefMut;
 
@@ -41,9 +41,9 @@ impl Processor {
         let instruction = CustomInstruction::unpack(instruction_data)?;
 
         match instruction {
-            CustomInstruction::Setup { amount } => {
+            CustomInstruction::Setup => {
                 msg!("Instruction: Setup");
-                Self::process_setup(accounts, amount, program_id)
+                Self::process_setup(accounts, instruction_data)
             }
             CustomInstruction::Buy { amount } => {
                 msg!("Instruction: Buy");
@@ -59,14 +59,15 @@ impl Processor {
 
     fn process_setup(
         accounts: &[AccountInfo],
-        _amount: u64,
-        _program_id: &Pubkey,
+        instruction_data: &[u8],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let _from_account = next_account_info(account_info_iter)?;
 
-        let _app_account = next_account_info(account_info_iter)?;
+        let app_account = next_account_info(account_info_iter)?;
+        let mut data = app_account.try_borrow_mut_data().unwrap();
+        (**data).copy_from_slice(&instruction_data[1..]);
 
         Ok(())
     }
@@ -149,78 +150,78 @@ impl Processor {
     }
 }
 
-use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
+// use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
 
-pub struct Escrow {
-    pub is_initialized: bool,
-    pub initializer_pubkey: Pubkey,
-    pub temp_token_account_pubkey: Pubkey,
-    pub initializer_token_to_receive_account_pubkey: Pubkey,
-    pub expected_amount: u64,
-}
+// pub struct Escrow {
+//     pub is_initialized: bool,
+//     pub initializer_pubkey: Pubkey,
+//     pub temp_token_account_pubkey: Pubkey,
+//     pub initializer_token_to_receive_account_pubkey: Pubkey,
+//     pub expected_amount: u64,
+// }
 
-impl Sealed for Escrow {}
+// impl Sealed for Escrow {}
 
-impl Pack for Escrow {
-    const LEN: usize = 105;
-    fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        let src = array_ref![src, 0, Escrow::LEN];
-        let (
-            is_initialized,
-            initializer_pubkey,
-            temp_token_account_pubkey,
-            initializer_token_to_receive_account_pubkey,
-            expected_amount,
-        ) = array_refs![src, 1, 32, 32, 32, 8];
-        let is_initialized = match is_initialized {
-            [0] => false,
-            [1] => true,
-            _ => return Err(ProgramError::InvalidAccountData),
-        };
+// impl Pack for Escrow {
+//     const LEN: usize = 105;
+//     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+//         let src = array_ref![src, 0, Escrow::LEN];
+//         let (
+//             is_initialized,
+//             initializer_pubkey,
+//             temp_token_account_pubkey,
+//             initializer_token_to_receive_account_pubkey,
+//             expected_amount,
+//         ) = array_refs![src, 1, 32, 32, 32, 8];
+//         let is_initialized = match is_initialized {
+//             [0] => false,
+//             [1] => true,
+//             _ => return Err(ProgramError::InvalidAccountData),
+//         };
 
-        Ok(Escrow {
-            is_initialized,
-            initializer_pubkey: Pubkey::new_from_array(*initializer_pubkey),
-            temp_token_account_pubkey: Pubkey::new_from_array(*temp_token_account_pubkey),
-            initializer_token_to_receive_account_pubkey: Pubkey::new_from_array(
-                *initializer_token_to_receive_account_pubkey,
-            ),
-            expected_amount: u64::from_le_bytes(*expected_amount),
-        })
-    }
+//         Ok(Escrow {
+//             is_initialized,
+//             initializer_pubkey: Pubkey::new_from_array(*initializer_pubkey),
+//             temp_token_account_pubkey: Pubkey::new_from_array(*temp_token_account_pubkey),
+//             initializer_token_to_receive_account_pubkey: Pubkey::new_from_array(
+//                 *initializer_token_to_receive_account_pubkey,
+//             ),
+//             expected_amount: u64::from_le_bytes(*expected_amount),
+//         })
+//     }
 
-    fn pack_into_slice(&self, dst: &mut [u8]) {
-        let dst = array_mut_ref![dst, 0, Escrow::LEN];
-        let (
-            is_initialized_dst,
-            initializer_pubkey_dst,
-            temp_token_account_pubkey_dst,
-            initializer_token_to_receive_account_pubkey_dst,
-            expected_amount_dst,
-        ) = mut_array_refs![dst, 1, 32, 32, 32, 8];
+//     fn pack_into_slice(&self, dst: &mut [u8]) {
+//         let dst = array_mut_ref![dst, 0, Escrow::LEN];
+//         let (
+//             is_initialized_dst,
+//             initializer_pubkey_dst,
+//             temp_token_account_pubkey_dst,
+//             initializer_token_to_receive_account_pubkey_dst,
+//             expected_amount_dst,
+//         ) = mut_array_refs![dst, 1, 32, 32, 32, 8];
 
-        let Escrow {
-            is_initialized,
-            initializer_pubkey,
-            temp_token_account_pubkey,
-            initializer_token_to_receive_account_pubkey,
-            expected_amount,
-        } = self;
+//         let Escrow {
+//             is_initialized,
+//             initializer_pubkey,
+//             temp_token_account_pubkey,
+//             initializer_token_to_receive_account_pubkey,
+//             expected_amount,
+//         } = self;
 
-        is_initialized_dst[0] = *is_initialized as u8;
-        initializer_pubkey_dst.copy_from_slice(initializer_pubkey.as_ref());
-        temp_token_account_pubkey_dst.copy_from_slice(temp_token_account_pubkey.as_ref());
-        initializer_token_to_receive_account_pubkey_dst
-            .copy_from_slice(initializer_token_to_receive_account_pubkey.as_ref());
-        *expected_amount_dst = expected_amount.to_le_bytes();
-    }
-}
+//         is_initialized_dst[0] = *is_initialized as u8;
+//         initializer_pubkey_dst.copy_from_slice(initializer_pubkey.as_ref());
+//         temp_token_account_pubkey_dst.copy_from_slice(temp_token_account_pubkey.as_ref());
+//         initializer_token_to_receive_account_pubkey_dst
+//             .copy_from_slice(initializer_token_to_receive_account_pubkey.as_ref());
+//         *expected_amount_dst = expected_amount.to_le_bytes();
+//     }
+// }
 
-impl IsInitialized for Escrow {
-    fn is_initialized(&self) -> bool {
-        self.is_initialized
-    }
-}
+// impl IsInitialized for Escrow {
+//     fn is_initialized(&self) -> bool {
+//         self.is_initialized
+//     }
+// }
 
 pub enum CustomInstruction {
     // Starts the trade by creating and populating an escrow account and transferring ownership of the given temp token account to the PDA
@@ -234,16 +235,11 @@ pub enum CustomInstruction {
     // 3. `[writable]` The escrow account, it will hold all necessary info about the trade.
     // 4. `[]` The rent sysvar
     // 5. `[]` The token program
-    Setup {
-        // The amount party A expects to receive of token Y
-        amount: u64
-    },
+    Setup,
     Buy {
-        // The amount party A expects to receive of token Y
         amount: u64
     },
     Sell {
-        // The amount party A expects to receive of token Y
         amount: u64
     },
 }
@@ -253,9 +249,7 @@ impl CustomInstruction {
         let (tag, rest) = input.split_first().ok_or(error::InstructionError::InvalidInstruction)?;
 
         Ok(match tag {
-            0 => Self::Setup {
-                amount: Self::unpack_amount(rest)?,
-            },
+            0 => Self::Setup,
             1 => Self::Buy {
                 amount: Self::unpack_amount(rest)?,
             },
