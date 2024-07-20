@@ -66,7 +66,7 @@ impl Processor {
 
         let _from_account = next_account_info(account_info_iter)?;
 
-        let _to_account = next_account_info(account_info_iter)?;
+        let _app_account = next_account_info(account_info_iter)?;
 
         Ok(())
     }
@@ -82,7 +82,7 @@ impl Processor {
 
         let app_account = next_account_info(account_info_iter)?;
 
-        let ix = transfer(from_account.key, app_account.key, 1000000000);
+        let ix = transfer(from_account.key, app_account.key, amount);
 
         invoke(
             &ix,
@@ -268,7 +268,7 @@ impl CustomInstruction {
 
     fn unpack_amount(input: &[u8]) -> Result<u64, ProgramError> {
         let amount = input
-            .get(..16)
+            .get(..8)
             .and_then(|slice| slice.try_into().ok())
             .map(u64::from_le_bytes)
             .ok_or(error::InstructionError::InvalidInstruction)?;
