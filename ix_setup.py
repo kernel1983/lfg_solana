@@ -58,8 +58,8 @@ def main():
     account_data = b''
     for i in range(bins):
         print(i)
-        account_data += (10**9).to_bytes(8, byteorder='little')
-        account_data += (2).to_bytes(16, byteorder='little')
+        account_data += (10**18).to_bytes(8, byteorder='little') # 10 lamport per token
+        account_data += (10**18 * 2).to_bytes(16, byteorder='little')
         account_data += (0).to_bytes(16, byteorder='little')
 
     print('setup instruction')

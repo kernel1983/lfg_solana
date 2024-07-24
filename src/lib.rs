@@ -16,9 +16,12 @@ use solana_program::{
 use std::{
     convert::TryInto,
     mem,
+    cmp
     // str,
 };
-//use std::cell::RefMut;
+// use std::cell::RefMut;
+// use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
+use arrayref::{array_ref, array_refs};
 
 // program entrypoint's implementation
 pub fn process_instruction(
@@ -86,15 +89,22 @@ impl Processor {
         let app_data = app_account.try_borrow_mut_data().unwrap();
         msg!("{} {}", app_data.len(), app_data.len()/mem::size_of::<Bin>());
         let mut i = 0;
+        let mut token_amount = 0;
+        let mut amount_left = amount.clone();
         while i < app_data.len() {
-            msg!("{}", i);
+            msg!("i {}", i);
+            let mut bin:Bin = Bin::unpack_from_slice(&app_data[i..i + mem::size_of::<Bin>()]).unwrap();
+            msg!("price {} total {} amount {}", bin.price, bin.total, bin.amount); //token per lamport
+            let amount_deduct = cmp::min(amount_left, ((bin.total - bin.amount) / bin.price as u128) as u64);
+            amount_left -= amount_deduct;
+            token_amount += amount_deduct * bin.price;
+            msg!("amount_left {} token_amount {}", amount_left, token_amount);
+            bin.amount += (amount_deduct * bin.price) as u128;
 
-            let bin:Bin = Bin::unpack_from_slice(&app_data[i..i + mem::size_of::<Bin>()]).unwrap();
-            msg!("{} {} {}", bin.price, bin.total, bin.amount);
             i += mem::size_of::<Bin>();
         }
 
-        let ix = transfer(from_account.key, app_account.key, amount);
+        let ix = transfer(from_account.key, app_account.key, amount - amount_left);
 
         invoke(
             &ix,
@@ -160,9 +170,6 @@ impl Processor {
         Ok(())
     }
 }
-
-use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
-
 
 struct Bin {
     price: u64,
