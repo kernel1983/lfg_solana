@@ -6,8 +6,9 @@ use solana_program::{
     msg,
     entrypoint::ProgramResult,
     pubkey::Pubkey,
-    // sysvar::{rent::Rent, Sysvar},
-    system_instruction::transfer,
+    sysvar::{rent::Rent, Sysvar},
+    system_instruction,
+    system_program,
     program_pack::{IsInitialized, Pack, Sealed},
     program_error::ProgramError,
     program::invoke,
@@ -53,7 +54,7 @@ impl Processor {
         match instruction {
             CustomInstruction::Setup => {
                 msg!("Instruction: Setup");
-                Self::process_setup(accounts, instruction_data)
+                Self::process_setup(program_id, accounts, instruction_data)
             }
             CustomInstruction::Buy { amount } => {
                 msg!("Instruction: Buy");
@@ -68,19 +69,46 @@ impl Processor {
     }
 
     fn process_setup(
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
         instruction_data: &[u8],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
-        let _from_account = next_account_info(account_info_iter)?;
+        let from_account = next_account_info(account_info_iter)?;
 
-        msg!("seed length {}", instruction_data[1]);
         let seed_len:u8 = instruction_data[1];
+        msg!("seed length {}", seed_len);
         let seed:&[u8] = &instruction_data[2..(2+seed_len) as usize];
         msg!("seed {:x?}", seed);
-        // let app_account = next_account_info(account_info_iter)?;
-        // msg!("app_account {}", app_account.key);
+        let bump:u8 = instruction_data[(2+seed_len) as usize];
+        msg!("bump {}", bump);
+        let space:usize = instruction_data.len() - (3+seed_len) as usize;
+        msg!("space {}", space);
+
+        let app_account = next_account_info(account_info_iter)?;
+        msg!("app_account {}", app_account.key);
+
+        // let rent_sysvar_account_info = &Rent::from_account_info(next_account_info(account_info_iter)?)?;
+        // let rent_lamports = rent_sysvar_account_info.minimum_balance(space.into());
+        let rent_lamports = Rent::get()?.minimum_balance(space.try_into().expect("overflow"));
+
+        invoke_signed(
+            &system_instruction::create_account(
+                &from_account.key,
+                &app_account.key,
+                rent_lamports,
+                space.try_into().unwrap(),
+                // &system_program::ID,
+                program_id,
+            ),
+            &[
+                from_account.clone(),
+                app_account.clone(),
+            ],
+            // &[&[&from_account.key.as_ref(), seed, &[bump]]],
+            &[&[seed, &[bump]]],
+        )?;
 
         // let mut data = app_account.try_borrow_mut_data().unwrap();
         // (**data).copy_from_slice(&instruction_data[1..]);
@@ -99,7 +127,10 @@ impl Processor {
 
         let app_account = next_account_info(account_info_iter)?;
         let app_data = app_account.try_borrow_mut_data().unwrap();
-        msg!("{} {}", app_data.len(), app_data.len()/mem::size_of::<Bin>());
+        msg!("data len {} bins {}", app_data.len(), app_data.len()/mem::size_of::<Bin>());
+
+        let token_mint_account = next_account_info(account_info_iter)?;
+
         let mut i = 0;
         let mut token_amount = 0;
         let mut amount_left = amount.clone();
@@ -116,14 +147,26 @@ impl Processor {
             i += mem::size_of::<Bin>();
         }
 
-        let ix = transfer(from_account.key, app_account.key, amount - amount_left);
+        msg!("cost {} {}", amount, amount_left);
+        let ix_transfer = system_instruction::transfer(from_account.key, app_account.key, amount - amount_left);
 
         invoke(
-            &ix,
+            &ix_transfer,
             &[from_account.clone(), app_account.clone()], // accounts required by instruction
         )?;
 
-        let user_account = next_account_info(account_info_iter)?;
+        let ix_mint_to = mint_to(&ID, token_mint_account.key, from_account.key, app_account.key, &[], token_amount).unwrap();
+        // https://docs.rs/spl-token/latest/spl_token/instruction/fn.mint_to.html
+        // https://michaelhly.com/solana-py/spl/token/instructions/#spl.token.instructions.MintToParams
+
+        invoke_signed(
+            &ix_mint_to,
+            &[from_account.clone(), app_account.clone()], // accounts required by instruction
+            &[],
+        )?;
+        // https://docs.rs/solana-sdk/latest/solana_sdk/program/fn.invoke_signed.html
+
+        // let user_account = next_account_info(account_info_iter)?;
         //msg!(&str::from_utf8(&user_account.try_borrow_data().unwrap()).unwrap());
         // let mut data = user_account.try_borrow_mut_data().unwrap();
         // (**data).copy_from_slice(&amount.to_le_bytes());
@@ -165,7 +208,7 @@ impl Processor {
 
         let app_account = next_account_info(account_info_iter)?;
 
-        // let ix = transfer(from_account.key, to_account.key, 1000000000);
+        // let ix = system_instruction::transfer(from_account.key, to_account.key, 1000000000);
 
         // invoke(
         //     &ix,

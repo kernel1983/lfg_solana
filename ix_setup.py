@@ -70,14 +70,16 @@ def main():
     setup_instruction_data = bytes([0])
     setup_instruction_data += len(seed).to_bytes(1, byteorder='little')
     setup_instruction_data += seed
+    setup_instruction_data += (bump).to_bytes(1, byteorder='little')
     setup_instruction_data += bins_data
     print('setup instruction data', setup_instruction_data)
 
     accounts = [
-        solders.instruction.AccountMeta(sender.pubkey(), True, False),
-        # solders.instruction.AccountMeta(app_pubkey, False, True),
+        solders.instruction.AccountMeta(sender.pubkey(), True, True),
+        solders.instruction.AccountMeta(app_pubkey, False, True),
         # solders.instruction.AccountMeta(user_pubkey, False, True),
-        # solders.instruction.AccountMeta(solders.system_program.ID, False, False),
+        solders.instruction.AccountMeta(program_id, False, False),
+        solders.instruction.AccountMeta(solders.system_program.ID, False, False),
     ]
     setup_instruction = solders.instruction.Instruction(program_id, setup_instruction_data, accounts)
     tx = solana.transaction.Transaction()
@@ -88,7 +90,7 @@ def main():
     account_info = http_client.get_account_info(app_pubkey)
     print(account_info)
     while not account_info.value:
-        print('waiting app account creating')
+        print('waiting for app account creating')
         time.sleep(3)
         account_info = http_client.get_account_info(app_pubkey)
 
