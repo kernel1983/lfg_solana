@@ -11,6 +11,12 @@ use solana_program::{
     program_pack::{IsInitialized, Pack, Sealed},
     program_error::ProgramError,
     program::invoke,
+    program::invoke_signed,
+};
+
+use spl_token::{
+    ID,
+    instruction::mint_to
 };
 
 use std::{
@@ -51,7 +57,7 @@ impl Processor {
             }
             CustomInstruction::Buy { amount } => {
                 msg!("Instruction: Buy");
-                msg!("{}", amount.to_string());
+                msg!("amount {}", amount);
                 Self::process_buy(accounts, amount, program_id)
             }
             CustomInstruction::Sell { amount } => {
@@ -69,9 +75,15 @@ impl Processor {
 
         let _from_account = next_account_info(account_info_iter)?;
 
-        let app_account = next_account_info(account_info_iter)?;
-        let mut data = app_account.try_borrow_mut_data().unwrap();
-        (**data).copy_from_slice(&instruction_data[1..]);
+        msg!("seed length {}", instruction_data[1]);
+        let seed_len:u8 = instruction_data[1];
+        let seed:&[u8] = &instruction_data[2..(2+seed_len) as usize];
+        msg!("seed {:x?}", seed);
+        // let app_account = next_account_info(account_info_iter)?;
+        // msg!("app_account {}", app_account.key);
+
+        // let mut data = app_account.try_borrow_mut_data().unwrap();
+        // (**data).copy_from_slice(&instruction_data[1..]);
 
         Ok(())
     }
