@@ -30,31 +30,6 @@ def main():
     # address = solders.pubkey.Pubkey.create_program_address([seed, bytes([bump])], program_id)
     # print('address', address)
 
-    # account_info = http_client.get_account_info(app_pubkey)
-    # print(account_info)
-    # if not account_info.value:
-    #     instruction = solders.system_program.create_account_with_seed(
-    #         solders.system_program.CreateAccountWithSeedParams(
-    #             from_pubkey=sender.pubkey(),
-    #             to_pubkey=app_pubkey,
-    #             base=sender.pubkey(),
-    #             seed=seed,
-    #             lamports=10000000,
-    #             space=account_size,
-    #             owner=program_id
-    #         )
-    #     )
-
-    #     tx = solana.transaction.Transaction()
-    #     tx.add(instruction)
-    #     ret = http_client.send_transaction(tx, sender)
-    #     print(ret)
-
-    #     while not account_info.value:
-    #         print('waiting app account')
-    #         time.sleep(3)
-    #         account_info = http_client.get_account_info(app_pubkey)
-
     # price in sol         u64   8 bytes
     # token total         u128  16 bytes
     # token amount        u128  16 bytes
@@ -74,7 +49,7 @@ def main():
     setup_instruction_data += bins_data
     print('setup instruction data', setup_instruction_data)
 
-    accounts = [
+    accounts = [ #pubkey: Pubkey, is_signer: bool, is_writable: bool
         solders.instruction.AccountMeta(sender.pubkey(), True, True),
         solders.instruction.AccountMeta(app_pubkey, False, True),
         # solders.instruction.AccountMeta(user_pubkey, False, True),

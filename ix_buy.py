@@ -23,80 +23,29 @@ def main():
     # create app account
     bins = 5
     account_size = 40 * bins
-    seed = 'app'
-    app_pubkey = solders.pubkey.Pubkey.create_with_seed(sender.pubkey(), seed, program_id)
+    seed = b'app'
+    # app_pubkey = solders.pubkey.Pubkey.create_with_seed(sender.pubkey(), seed, program_id)
+    app_pubkey, bump = solders.pubkey.Pubkey.find_program_address(seeds=[seed], program_id=program_id)
     print('app account', app_pubkey)
     account_info = http_client.get_account_info(app_pubkey)
     print(account_info)
     if not account_info.value:
-        instruction = solders.system_program.create_account_with_seed(
-            solders.system_program.CreateAccountWithSeedParams(
-                from_pubkey=sender.pubkey(),
-                to_pubkey=app_pubkey,
-                base=sender.pubkey(),
-                seed=seed,
-                lamports=10000000,
-                space=account_size,
-                owner=program_id
-            )
-        )
-
-        tx = solana.transaction.Transaction()
-        tx.add(instruction)
-        ret = http_client.send_transaction(tx, sender)
-        print(ret)
-
-        while not account_info.value:
-            print('waiting app account')
-            time.sleep(3)
-            account_info = http_client.get_account_info(app_pubkey)
-
-
-    # create user account
-    account_size = 8
-    seed = 'user'
-    user_pubkey = solders.pubkey.Pubkey.create_with_seed(sender.pubkey(), seed, program_id)
-    print('user account', user_pubkey)
-    account_info = http_client.get_account_info(user_pubkey)
-    print(account_info)
-    if not account_info.value:
-        instruction = solders.system_program.create_account_with_seed(
-            solders.system_program.CreateAccountWithSeedParams(
-                from_pubkey=sender.pubkey(),
-                to_pubkey=user_pubkey,
-                base=sender.pubkey(),
-                seed=seed,
-                lamports=10000000,
-                space=account_size,
-                owner=program_id
-            )
-        )
-
-        tx = solana.transaction.Transaction()
-        tx.add(instruction)
-        # ret = http_client.send_transaction(tx, sender, app_account)
-        ret = http_client.send_transaction(tx, sender)
-        print(ret)
-        # print(keypair.pubkey())
-        # return
-        # wait until account created
-
-    while not account_info.value:
-        print('waiting user account')
-        time.sleep(3)
-        account_info = http_client.get_account_info(user_pubkey)
+        return
 
     print('instruction')
     arbitrary_instruction_data = bytes([1])
-    lamports = 10**9 # 1 sol
+    lamports = 10**10 # 1 sol
     arbitrary_instruction_data += lamports.to_bytes(8, byteorder='little')
     print('instruction data', arbitrary_instruction_data)
 
-    accounts = [
-        solders.instruction.AccountMeta(sender.pubkey(), True, False),
+    accounts = [ #pubkey: Pubkey, is_signer: bool, is_writable: bool
+        solders.instruction.AccountMeta(sender.pubkey(), True, True),
         solders.instruction.AccountMeta(app_pubkey, False, True),
-        solders.instruction.AccountMeta(user_pubkey, False, True),
+        solders.instruction.AccountMeta(token_mint_account, False, True),
+        solders.instruction.AccountMeta(token_account, False, True),
         solders.instruction.AccountMeta(solders.system_program.ID, False, False),
+        solders.instruction.AccountMeta(spl.token.constants.TOKEN_PROGRAM_ID, False, False),
+        # solders.instruction.AccountMeta(program_id, False, False),
     ]
     instruction = solders.instruction.Instruction(program_id, arbitrary_instruction_data, accounts)
     tx = solana.transaction.Transaction()
