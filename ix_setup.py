@@ -62,12 +62,12 @@ def main():
     ret = http_client.send_transaction(tx, sender)
     print(ret)
 
-    account_info = http_client.get_account_info(app_pubkey)
-    print(account_info)
-    while not account_info.value:
-        print('waiting for app account creating')
-        time.sleep(3)
-        account_info = http_client.get_account_info(app_pubkey)
+    # account_info = http_client.get_account_info(app_pubkey)
+    # print(account_info)
+    # while not account_info.value:
+    #     print('waiting for app account creating')
+    #     time.sleep(3)
+    #     account_info = http_client.get_account_info(app_pubkey)
 
 if __name__ == '__main__':
     main()

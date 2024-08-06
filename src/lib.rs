@@ -158,9 +158,8 @@ impl Processor {
         let token_account = next_account_info(account_info_iter)?;
         msg!("token_account {}", token_account.key);
 
-        let system_program_account = next_account_info(account_info_iter)?;
-        let token_program_account = next_account_info(account_info_iter)?;
-        // let my_program_account = next_account_info(account_info_iter)?;
+        // let _system_program_account = next_account_info(account_info_iter)?;
+        // let _token_program_account = next_account_info(account_info_iter)?;
 
         // let ix_mint_to = mint_to(
         //     &spl_token::ID,
@@ -181,11 +180,9 @@ impl Processor {
         invoke_signed(
             &ix_mint_to,
             &[
-                app_account.clone(),
                 token_mint_account.clone(),
                 token_account.clone(),
-                // from_account.clone(),
-                // token_program_account.clone(),
+                app_account.clone(),
             ],
             &[&[&seed, &[bump]]],
         )?;

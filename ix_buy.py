@@ -45,7 +45,6 @@ def main():
         solders.instruction.AccountMeta(token_account, False, True),
         solders.instruction.AccountMeta(solders.system_program.ID, False, False),
         solders.instruction.AccountMeta(spl.token.constants.TOKEN_PROGRAM_ID, False, False),
-        # solders.instruction.AccountMeta(program_id, False, False),
     ]
     instruction = solders.instruction.Instruction(program_id, arbitrary_instruction_data, accounts)
     tx = solana.transaction.Transaction()
